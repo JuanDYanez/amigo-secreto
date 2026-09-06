@@ -4,7 +4,6 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 
-// Nouns with gender/plural classification
 const TOPICS = {
   Animales: [
     { name: 'León', gender: 'm', plural: false },
@@ -76,7 +75,6 @@ const TOPICS = {
   ]
 };
 
-// Fun and funny adjectives with masculine, feminine, and plural forms
 const ADJECTIVES = [
   { m: 'Borracho', f: 'Borracha', mp: 'Borrachos', fp: 'Borrachas' },
   { m: 'Somnoliento', f: 'Somnolienta', mp: 'Somnolientos', fp: 'Somnolientas' },
@@ -126,6 +124,15 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('PROFILE');
   const [isRevealed, setIsRevealed] = useState(false);
   const [newWish, setNewWish] = useState('');
+
+  // Efecto para inyectar dinámicamente el favicon con el emoji 🎁 en la cabecera
+  useEffect(() => {
+    const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+    link.type = 'image/svg+xml';
+    link.rel = 'icon';
+    link.href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎁</text></svg>`;
+    document.getElementsByTagName('head')[0].appendChild(link);
+  }, []);
 
   // 1. Inicializar Autenticación Anónima
   useEffect(() => {
@@ -218,7 +225,6 @@ export default function App() {
     const items = TOPICS[topic];
     let possibleNicknames = [];
     
-    // Generar combinaciones asegurando que los elementos (nombres) NO se repitan
     let shuffledItems = [...items].sort(() => Math.random() - 0.5);
     let shuffledAdjectives = [...ADJECTIVES].sort(() => Math.random() - 0.5);
 
@@ -236,7 +242,6 @@ export default function App() {
       possibleNicknames.push(`${item.name} ${chosenAdj}`);
     }
 
-    // Mezclar los apodos únicos para garantizar asignación aleatoria sin repetir
     possibleNicknames = possibleNicknames.sort(() => Math.random() - 0.5);
 
     let newPlayers = realNames.map((name, index) => ({
