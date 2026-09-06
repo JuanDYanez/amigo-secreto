@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Gift, Users, Lock, Eye, EyeOff, UserCircle, List, CheckCircle2, ChevronRight, Shuffle, LogIn, Plus, AlertCircle, Copy, Check, Heart, Sparkles, Smile } from 'lucide-react';
+import { Gift, Users, Lock, Eye, EyeOff, UserCircle, List, CheckCircle2, ChevronRight, Shuffle, LogIn, Plus, AlertCircle, Copy, Check, Heart, Sparkles, Smile, Minus } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
@@ -7,7 +7,7 @@ import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, getDoc } 
 const TOPICS = {
   Animales: ['León', 'Tigre', 'Oso', 'Elefante', 'Zorro', 'Lobo', 'Búho', 'Delfín', 'Panda', 'Koala', 'Pingüino', 'Canguro', 'Cebra', 'Jirafa', 'Mono'],
   Frutas: ['Manzana', 'Banana', 'Naranja', 'Mango', 'Kiwi', 'Durazno', 'Cereza', 'Pera', 'Uva', 'Melón', 'Fresa', 'Piña', 'Ciruela', 'Limón', 'Coco'],
-  Superhéroes: ['Batman', 'Superman', 'Spiderman', 'Mujer Maravilla', 'Iron Man', 'Thor', 'Hulk', 'Flash', 'Wolverine', 'Aquaman', 'Cyborg', 'Robin', 'Batgirl', 'Supergirl', 'Arrow'],
+  Superheroes: ['Batman', 'Superman', 'Spiderman', 'Mujer Maravilla', 'Iron Man', 'Thor', 'Hulk', 'Flash', 'Wolverine', 'Aquaman', 'Cyborg', 'Robin', 'Batgirl', 'Supergirl', 'Arrow'],
   Profesiones: ['Doctor', 'Astronauta', 'Detective', 'Chef', 'Piloto', 'Artista', 'Científico', 'Ninja', 'Pirata', 'Mago', 'Caballero', 'Granjero', 'Profesor', 'Ingeniero', 'Músico']
 };
 
@@ -87,11 +87,36 @@ export default function App() {
   const targetPlayer = myPlayer && currentGame ? currentGame.players.find(p => p.id === myPlayer.targetId) : null;
 
   const handleNumChange = (e) => {
-    const val = parseInt(e.target.value);
-    if (val >= 3 && val <= 30) {
-      setNumParticipants(val);
-      setRealNames(Array(val).fill(''));
+    const val = e.target.value;
+    if (val === '') {
+      setNumParticipants('');
+      return;
     }
+    const parsed = parseInt(val, 10);
+    if (!isNaN(parsed)) {
+      setNumParticipants(parsed);
+      const clamped = Math.max(1, Math.min(50, parsed));
+      setRealNames(prev => {
+        if (clamped > prev.length) {
+          return [...prev, ...Array(clamped - prev.length).fill('')];
+        } else {
+          return prev.slice(0, clamped);
+        }
+      });
+    }
+  };
+
+  const adjustNumParticipants = (delta) => {
+    const current = typeof numParticipants === 'number' ? numParticipants : 3;
+    const next = Math.max(1, Math.min(50, current + delta));
+    setNumParticipants(next);
+    setRealNames(prev => {
+      if (next > prev.length) {
+        return [...prev, ...Array(next - prev.length).fill('')];
+      } else {
+        return prev.slice(0, next);
+      }
+    });
   };
 
   const updateName = (index, value) => {
@@ -101,8 +126,9 @@ export default function App() {
   };
 
   const handleStartGame = async () => {
-    if (realNames.some(name => name.trim() === '')) {
-      setError("¡Por favor, llena todos los nombres reales para continuar!");
+    const validNum = typeof numParticipants === 'number' ? numParticipants : parseInt(numParticipants, 10);
+    if (isNaN(validNum) || validNum < 1 || realNames.some(name => name.trim() === '')) {
+      setError("¡Por favor, llena todos los nombres reales y verifica la cantidad de participantes!");
       return;
     }
     setError('');
@@ -119,7 +145,7 @@ export default function App() {
     let newPlayers = realNames.map((name, index) => ({
       id: index.toString(),
       realName: name.trim(),
-      nickname: possibleNames[index],
+      nickname: possibleNames[index % possibleNames.length],
       targetId: null,
       wishes: [],
       claimedBy: null
@@ -253,7 +279,7 @@ export default function App() {
                 placeholder="PIN del Juego"
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value)}
-                className="w-full px-4 py-4 rounded-xl border-2 border-slate-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 outline-none uppercase font-black text-center tracking-widest text-2xl text-slate-700 placeholder-slate-300 transition-all"
+                className="w-full px-4 py-4 rounded-xl border-2 border-slate-200 bg-white text-slate-800 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 outline-none uppercase font-black text-center tracking-widest text-2xl placeholder-slate-400 transition-all"
                 maxLength={4}
               />
               <button 
@@ -296,17 +322,33 @@ export default function App() {
           <div className="space-y-6">
             <div>
               <label className="block font-black text-slate-700 mb-3 text-lg">¿Cuántos amigos? 👯</label>
-              <input 
-                type="number" min="3" max="30" 
-                value={numParticipants} onChange={handleNumChange}
-                className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 outline-none font-bold text-xl text-slate-700 transition-all"
-              />
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => adjustNumParticipants(-1)}
+                  className="bg-purple-100 hover:bg-purple-200 text-purple-700 font-black p-4 rounded-xl border-b-4 border-purple-300 active:border-b-0 active:translate-y-1 transition-all"
+                  title="Restar"
+                >
+                  <Minus size={20} />
+                </button>
+                <input 
+                  type="number" min="1" max="50" 
+                  value={numParticipants} onChange={handleNumChange}
+                  className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 bg-white text-slate-800 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 outline-none font-bold text-xl text-center transition-all"
+                />
+                <button 
+                  onClick={() => adjustNumParticipants(1)}
+                  className="bg-purple-100 hover:bg-purple-200 text-purple-700 font-black p-4 rounded-xl border-b-4 border-purple-300 active:border-b-0 active:translate-y-1 transition-all"
+                  title="Sumar"
+                >
+                  <Plus size={20} />
+                </button>
+              </div>
             </div>
             <div>
               <label className="block font-black text-slate-700 mb-3 text-lg">Tema de Apodos 🎭</label>
               <select 
                 value={topic} onChange={(e) => setTopic(e.target.value)}
-                className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 outline-none font-bold text-xl text-slate-700 transition-all cursor-pointer"
+                className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 bg-white text-slate-800 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 outline-none font-bold text-xl transition-all cursor-pointer"
               >
                 {Object.keys(TOPICS).map(t => <option key={t} value={t}>{t}</option>)}
               </select>
@@ -345,7 +387,7 @@ export default function App() {
               <input 
                 key={index} type="text" placeholder={`Amigo #${index + 1}`}
                 value={name} onChange={(e) => updateName(index, e.target.value)}
-                className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none font-bold text-lg text-slate-700 transition-all"
+                className="w-full px-5 py-4 rounded-xl border-2 border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none font-bold text-lg transition-all"
               />
             ))}
           </div>
@@ -459,16 +501,16 @@ export default function App() {
                       </div>
 
                       <div className="grid md:grid-cols-2 gap-6 mb-10">
-                        <div className="bg-gradient-to-br from-blue-400 to-blue-600 p-8 rounded-3xl shadow-lg border-4 border-white transform md:-rotate-2">
+                        <div className="bg-gradient-to-br from-blue-400 to-blue-600 p-8 rounded-3xl shadow-lg border-4 border-white transform md:-rotate-2 text-center">
                           <p className="text-sm font-black text-blue-200 uppercase tracking-widest mb-2">Tu Identidad Secreta</p>
                           <p className="text-3xl md:text-4xl font-black text-white">{myPlayer.nickname}</p>
-                          <p className="font-bold text-blue-100 mt-4 bg-blue-700 bg-opacity-30 p-3 rounded-xl inline-block">¡Usa esto para publicar tus deseos! 🤫</p>
+                          <p className="font-bold text-blue-100 mt-4 bg-blue-700 bg-opacity-30 p-3 rounded-xl inline-block text-sm">¡Usa esto para publicar tus deseos! 🤫</p>
                         </div>
-                        <div className="bg-gradient-to-br from-pink-400 to-pink-600 p-8 rounded-3xl shadow-lg border-4 border-white transform md:rotate-2 relative">
+                        <div className="bg-gradient-to-br from-pink-400 to-pink-600 p-8 rounded-3xl shadow-lg border-4 border-white transform md:rotate-2 relative text-center">
                           <Heart size={40} className="text-white opacity-30 absolute top-4 right-4" fill="currentColor"/>
                           <p className="text-sm font-black text-pink-200 uppercase tracking-widest mb-2">Le darás un regalo a</p>
                           <p className="text-3xl md:text-4xl font-black text-white">{targetPlayer?.nickname}</p>
-                          <p className="font-bold text-pink-100 mt-4 bg-pink-700 bg-opacity-30 p-3 rounded-xl inline-block">¡Revisa sus deseos en la pizarra! 🎁</p>
+                          <p className="font-bold text-pink-100 mt-4 bg-pink-700 bg-opacity-30 p-3 rounded-xl inline-block text-sm">¡Revisa sus deseos en la pizarra! 🎁</p>
                         </div>
                       </div>
 
@@ -493,7 +535,7 @@ export default function App() {
                             type="text" placeholder="Ej. ¡Un oso de peluche gigante! 🧸"
                             value={newWish} onChange={(e) => setNewWish(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleAddWish()}
-                            className="flex-1 px-5 py-4 rounded-2xl border-2 border-slate-200 focus:border-pink-500 focus:ring-4 focus:ring-pink-100 outline-none font-bold text-lg"
+                            className="flex-1 px-5 py-4 rounded-2xl border-2 border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-pink-500 focus:ring-4 focus:ring-pink-100 outline-none font-bold text-lg"
                           />
                           <button 
                             onClick={handleAddWish}
@@ -532,13 +574,13 @@ export default function App() {
                             Esperando...
                           </span>
                         )}
-                        <h3 className={`font-black text-2xl mb-4 pr-10 ${isYellow ? 'text-slate-900' : 'text-white'}`}>
+                        <h3 className={`font-black text-2xl mb-4 ${isYellow ? 'text-slate-900' : 'text-white'}`}>
                           {player.nickname}
                         </h3>
                         
-                        <div className={`rounded-2xl p-4 min-h-[100px] ${isYellow ? 'bg-yellow-100/50' : 'bg-black/10'}`}>
+                        <div className={`rounded-2xl p-4 min-h-[100px] text-left ${isYellow ? 'bg-yellow-100/50' : 'bg-black/10'}`}>
                           {player.wishes.length === 0 ? (
-                            <p className={`font-bold italic text-sm ${isYellow ? 'text-slate-600' : 'text-white/70'}`}>Pensando en un deseo... 💭</p>
+                            <p className={`font-bold italic text-sm text-center ${isYellow ? 'text-slate-600' : 'text-white/70'}`}>Pensando en un deseo... 💭</p>
                           ) : (
                             <ul className="space-y-3">
                               {player.wishes.map((wish, idx) => (
