@@ -4,16 +4,97 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 
+// Nouns with gender/plural classification
 const TOPICS = {
-  Animales: ['León', 'Tigre', 'Oso', 'Elefante', 'Zorro', 'Lobo', 'Búho', 'Delfín', 'Panda', 'Koala', 'Pingüino', 'Canguro', 'Cebra', 'Jirafa', 'Mono'],
-  Frutas: ['Manzana', 'Banana', 'Naranja', 'Mango', 'Kiwi', 'Durazno', 'Cereza', 'Pera', 'Uva', 'Melón', 'Fresa', 'Piña', 'Ciruela', 'Limón', 'Coco'],
-  Superheroes: ['Batman', 'Superman', 'Spiderman', 'Mujer Maravilla', 'Iron Man', 'Thor', 'Hulk', 'Flash', 'Wolverine', 'Aquaman', 'Cyborg', 'Robin', 'Batgirl', 'Supergirl', 'Arrow'],
-  Profesiones: ['Doctor', 'Astronauta', 'Detective', 'Chef', 'Piloto', 'Artista', 'Científico', 'Ninja', 'Pirata', 'Mago', 'Caballero', 'Granjero', 'Profesor', 'Ingeniero', 'Músico']
+  Animales: [
+    { name: 'León', gender: 'm', plural: false },
+    { name: 'Tigre', gender: 'm', plural: false },
+    { name: 'Oso', gender: 'm', plural: false },
+    { name: 'Elefante', gender: 'm', plural: false },
+    { name: 'Zorro', gender: 'm', plural: false },
+    { name: 'Lobo', gender: 'm', plural: false },
+    { name: 'Búho', gender: 'm', plural: false },
+    { name: 'Delfín', gender: 'm', plural: false },
+    { name: 'Panda', gender: 'm', plural: false },
+    { name: 'Koala', gender: 'm', plural: false },
+    { name: 'Pingüino', gender: 'm', plural: false },
+    { name: 'Canguro', gender: 'm', plural: false },
+    { name: 'Cebra', gender: 'f', plural: false },
+    { name: 'Jirafa', gender: 'f', plural: false },
+    { name: 'Mono', gender: 'm', plural: false }
+  ],
+  Comida: [
+    { name: 'Pizza', gender: 'f', plural: false },
+    { name: 'Tacos', gender: 'm', plural: true },
+    { name: 'Hamburguesa', gender: 'f', plural: false },
+    { name: 'Sushi', gender: 'm', plural: false },
+    { name: 'Lasagna', gender: 'f', plural: false },
+    { name: 'Burrito', gender: 'm', plural: false },
+    { name: 'Empanada', gender: 'f', plural: false },
+    { name: 'HotDog', gender: 'm', plural: false },
+    { name: 'Paella', gender: 'f', plural: false },
+    { name: 'Ramen', gender: 'm', plural: false },
+    { name: 'Arepa', gender: 'f', plural: false },
+    { name: 'Nachos', gender: 'm', plural: true },
+    { name: 'PolloFrito', gender: 'm', plural: false },
+    { name: 'Pasta', gender: 'f', plural: false },
+    { name: 'Torta', gender: 'f', plural: false }
+  ],
+  Superheroes: [
+    { name: 'Batman', gender: 'm', plural: false },
+    { name: 'Superman', gender: 'm', plural: false },
+    { name: 'Spiderman', gender: 'm', plural: false },
+    { name: 'Mujer Maravilla', gender: 'f', plural: false },
+    { name: 'Iron Man', gender: 'm', plural: false },
+    { name: 'Thor', gender: 'm', plural: false },
+    { name: 'Hulk', gender: 'm', plural: false },
+    { name: 'Flash', gender: 'm', plural: false },
+    { name: 'Wolverine', gender: 'm', plural: false },
+    { name: 'Aquaman', gender: 'm', plural: false },
+    { name: 'Cyborg', gender: 'm', plural: false },
+    { name: 'Robin', gender: 'm', plural: false },
+    { name: 'Batgirl', gender: 'f', plural: false },
+    { name: 'Supergirl', gender: 'f', plural: false },
+    { name: 'Arrow', gender: 'm', plural: false }
+  ],
+  Profesiones: [
+    { name: 'Doctor', gender: 'm', plural: false },
+    { name: 'Astronauta', gender: 'm', plural: false },
+    { name: 'Detective', gender: 'm', plural: false },
+    { name: 'Chef', gender: 'm', plural: false },
+    { name: 'Piloto', gender: 'm', plural: false },
+    { name: 'Artista', gender: 'm', plural: false },
+    { name: 'Científico', gender: 'm', plural: false },
+    { name: 'Ninja', gender: 'm', plural: false },
+    { name: 'Pirata', gender: 'm', plural: false },
+    { name: 'Mago', gender: 'm', plural: false },
+    { name: 'Caballero', gender: 'm', plural: false },
+    { name: 'Granjero', gender: 'm', plural: false },
+    { name: 'Profesor', gender: 'm', plural: false },
+    { name: 'Ingeniero', gender: 'm', plural: false },
+    { name: 'Músico', gender: 'm', plural: false }
+  ]
 };
 
-const ADJECTIVES = ['Valiente', 'Rápido', 'Sigiloso', 'Feliz', 'Listo', 'Cósmico', 'Mega', 'Épico', 'Salvaje', 'Secreto', 'Mágico', 'Volador', 'Súper', 'Dorado', 'Sombra'];
+// Fun and funny adjectives with masculine, feminine, and plural forms
+const ADJECTIVES = [
+  { m: 'Borracho', f: 'Borracha', mp: 'Borrachos', fp: 'Borrachas' },
+  { m: 'Somnoliento', f: 'Somnolienta', mp: 'Somnolientos', fp: 'Somnolientas' },
+  { m: 'Chismoso', f: 'Chismosa', mp: 'Chismosos', fp: 'Chismosas' },
+  { m: 'Confundido', f: 'Confundida', mp: 'Confundidos', fp: 'Confundidas' },
+  { m: 'Dramático', f: 'Dramática', mp: 'Dramáticos', fp: 'Dramáticas' },
+  { m: 'Ansioso', f: 'Ansiosa', mp: 'Ansiosos', fp: 'Ansiosas' },
+  { m: 'Hambriento', f: 'Hambrienta', mp: 'Hambrientos', fp: 'Hambrientas' },
+  { m: 'Llorón', f: 'Llorona', mp: 'Llorones', fp: 'Lloronas' },
+  { m: 'Despistado', f: 'Despistada', mp: 'Despistados', fp: 'Despistadas' },
+  { m: 'Escandaloso', f: 'Escandalosa', mp: 'Escandalosos', fp: 'Escandalosas' },
+  { m: 'Vagoneta', f: 'Vagoneta', mp: 'Vagonetas', fp: 'Vagonetas' },
+  { m: 'Mañoso', f: 'Mañosa', mp: 'Mañosos', fp: 'Mañosas' },
+  { m: 'Brusco', f: 'Brusca', mp: 'Bruscos', fp: 'Bruscas' },
+  { m: 'Perezoso', f: 'Perezosa', mp: 'Perezosos', fp: 'Perezosas' },
+  { m: 'Exagerado', f: 'Exagerada', mp: 'Exagerados', fp: 'Exageradas' }
+];
 
-// --- FIREBASE SETUP ---
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
   apiKey: "AIzaSyDtAIL1grCqg6Ef8xjazlK0SVxYceo7nWc",
   authDomain: "amigosecreto-54fd0.firebaseapp.com",
@@ -133,19 +214,34 @@ export default function App() {
     }
     setError('');
 
-    const nouns = TOPICS[topic];
-    let possibleNames = [];
-    for (let adj of ADJECTIVES) {
-      for (let noun of nouns) {
-        possibleNames.push(`${noun} ${adj}`);
+    const items = TOPICS[topic];
+    let possibleNicknames = [];
+    
+    // Generar combinaciones de elementos únicos y adjetivos adaptados en género/número
+    let shuffledItems = [...items].sort(() => Math.random() - 0.5);
+    let shuffledAdjectives = [...ADJECTIVES].sort(() => Math.random() - 0.5);
+
+    for (let i = 0; i < realNames.length; i++) {
+      const item = shuffledItems[i % shuffledItems.length];
+      const adjObj = shuffledAdjectives[i % shuffledAdjectives.length];
+      
+      let chosenAdj = adjObj.m;
+      if (item.plural) {
+        chosenAdj = item.gender === 'f' ? adjObj.fp : adjObj.mp;
+      } else {
+        chosenAdj = item.gender === 'f' ? adjObj.f : adjObj.m;
       }
+
+      possibleNicknames.push(`${item.name} ${chosenAdj}`);
     }
-    possibleNames = possibleNames.sort(() => Math.random() - 0.5);
+
+    // Mezclar los apodos únicos para garantizar asignación aleatoria sin repetir
+    possibleNicknames = possibleNicknames.sort(() => Math.random() - 0.5);
 
     let newPlayers = realNames.map((name, index) => ({
       id: index.toString(),
       realName: name.trim(),
-      nickname: possibleNames[index % possibleNames.length],
+      nickname: possibleNicknames[index],
       targetId: null,
       wishes: [],
       claimedBy: null
@@ -558,34 +654,33 @@ export default function App() {
                     </div>
                     <div>
                       <h2 className="text-3xl font-black text-slate-800">Pizarra Pública 📢</h2>
-                      <p className="font-bold text-slate-500 mt-1">¡Actualizaciones en vivo de los deseos de todos!</p>
+                      <p className="font-bold text-slate-500 mt-1">¡Aquí puedes ver los deseos de la persona a la que le darás tu regalo!</p>
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {currentGame.players.map((player, idx) => {
+                  <div className="grid md:grid-cols-1 gap-6 max-w-xl mx-auto">
+                    {targetPlayer && (() => {
+                      const idx = currentGame.players.findIndex(p => p.id === targetPlayer.id);
                       const colorClass = cardColors[idx % cardColors.length];
                       const isYellow = colorClass.includes('bg-yellow');
                       
                       return (
-                      <div key={player.id} className={`${colorClass} p-6 rounded-3xl shadow-lg border-b-4 relative transform hover:-translate-y-1 transition-transform`}>
-                        {player.claimedBy === null && (
-                          <span className="absolute -top-3 -right-2 font-black bg-white text-slate-800 px-3 py-1 rounded-full text-xs shadow-md border-2 border-slate-200 z-10 animate-pulse">
-                            Esperando...
-                          </span>
-                        )}
-                        <h3 className={`font-black text-2xl mb-4 ${isYellow ? 'text-slate-900' : 'text-white'}`}>
-                          {player.nickname}
+                      <div key={targetPlayer.id} className={`${colorClass} p-8 rounded-3xl shadow-xl border-b-8 relative transform`}>
+                        <span className="absolute -top-4 right-4 font-black bg-white text-slate-900 px-4 py-1.5 rounded-full text-sm shadow-md border-2 border-slate-200 z-10">
+                          🎁 Tu Amigo Secreto
+                        </span>
+                        <h3 className={`font-black text-3xl mb-6 text-center ${isYellow ? 'text-slate-900' : 'text-white'}`}>
+                          {targetPlayer.nickname}
                         </h3>
                         
-                        <div className={`rounded-2xl p-4 min-h-[100px] text-left ${isYellow ? 'bg-yellow-100/50' : 'bg-black/10'}`}>
-                          {player.wishes.length === 0 ? (
-                            <p className={`font-bold italic text-sm text-center ${isYellow ? 'text-slate-600' : 'text-white/70'}`}>Pensando en un deseo... 💭</p>
+                        <div className={`rounded-2xl p-6 min-h-[140px] text-left ${isYellow ? 'bg-yellow-100/50' : 'bg-black/10'}`}>
+                          {targetPlayer.wishes.length === 0 ? (
+                            <p className={`font-bold italic text-base text-center py-6 ${isYellow ? 'text-slate-600' : 'text-white/80'}`}>Tu amigo secreto aún no ha agregado deseos... 💭</p>
                           ) : (
-                            <ul className="space-y-3">
-                              {player.wishes.map((wish, idx) => (
-                                <li key={idx} className={`flex items-start gap-2 font-bold ${isYellow ? 'text-slate-800' : 'text-white'}`}>
-                                  <Gift size={18} className={`shrink-0 mt-0.5 ${isYellow ? 'text-pink-500' : 'text-white/80'}`} />
+                            <ul className="space-y-4">
+                              {targetPlayer.wishes.map((wish, idx) => (
+                                <li key={idx} className={`flex items-start gap-3 font-bold text-lg ${isYellow ? 'text-slate-800' : 'text-white'}`}>
+                                  <Gift size={22} className={`shrink-0 mt-1 ${isYellow ? 'text-pink-500' : 'text-white/90'}`} />
                                   <span>{wish}</span>
                                 </li>
                               ))}
@@ -593,7 +688,7 @@ export default function App() {
                           )}
                         </div>
                       </div>
-                    )})}
+                    )})()}
                   </div>
                 </div>
               )}
